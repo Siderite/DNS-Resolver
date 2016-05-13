@@ -51,7 +51,7 @@ function refresh() {
 	.append($('<div></div>').text('Total DNS entries: ' + hosts.length))
 	.append($('<div></div>').text('Local only DNS entries: ' + toReplace))
 	.append($('<div></div>').text('Displayed entries: ' + displayed))
-	.append($('<div></div>').text('DNS entries size: ' + size));
+	.append($('<div></div>').text('DNS entries size: ' + size + 'bytes'));
 	$('#inpHost').autocomplete("option", "source", hosts);
 	$('#divTodo').toggle(!options.showAll);
 }
