@@ -1,0 +1,56 @@
+label {
+	margin-right:2px;
+}
+
+#divHeader {
+	margin-bottom:10px;
+}
+
+#divHeader span {
+	display:inline-block;
+	margin-left:5px;
+}
+
+#divHeader input[type=checkbox],#divHeader label {
+	vertical-align:middle;
+	height:20px;
+	line-height:20px;
+}
+
+#divTodo {
+	margin-top:20px;
+	font-weight:bold;
+	font-size:1.5em;
+}
+
+#divHosts {
+	margin-top:10px;
+}
+
+#divHosts .title {
+	font-style:italic;
+	font-size:1.2em;
+}
+
+#divEntries div {
+	cursor:pointer;
+}
+
+#divEntries .comment {
+	font-style:italic;
+	color:green;
+}
+
+#divEntries .active {
+	margin-top:3px;
+	border-top:1px solid #F0F0F0;
+}
+
+#divEntries .replaceHost {
+	font-weight:bold;
+}
+
+#inpHost {
+	width:auto;
+	min-width:200px;
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Siderite's Hosts file</title>
+	<script src="jquery-2.2.2.min.js"></script>
+	<script src="jquery-ui.min.js"></script>
+	<script src="hosts.js"></script>
+	<link rel="stylesheet" href="jquery-ui.min.css"/>
+	<link rel="stylesheet" href="hosts.css"/>
+  </head>
+  <body>
+	<div id="divHeader">
+		<span title="Get more info in the background page console"><label for="chkDebug">Debug:</label><input id="chkDebug" type="checkbox"/></span>
+		<span title="Local DNS entries replace hosts with IPs directly in the requests"><label for="chkAutoreplace">Auto Replace:</label><input id="chkAutoreplace" type="checkbox"/></span>
+		<span title="Show all entries, not just the local only ones"><label for="chkShowAll">Show all:</label><input id="chkShowAll" type="checkbox"/></span>
+		<span title="Interogate or edit status of host"><label for="inpHost">Host:</label><input id="inpHost" type="test"/><button id="btnStatus">Status</button></span>
+		<button id="btnClearData">Clear All Data</button>
+    </div>
+	<div id="divInfo"></div>
+	<div id="divFilter"><label for="inpFilter">Filter:<label><input id="inpFilter" type="text"/></div>
+	<div id="divTodo">Add this to the hosts file:</div>
+	<div id="divHosts">
+		<div class="title">#Siderite's DNS Resolver</div>
+		<div id="divEntries"></div>
+	</div>
+  </body>
+</html>
