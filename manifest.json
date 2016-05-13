@@ -3,7 +3,7 @@
 
 	"name" : "Siderite's DNS Resolver",
 	"description" : "Resolve DNS addresses based on previously working IPs",
-	"version" : "0.0.1",
+	"version" : "0.0.2",
 
 	"permissions" : [
 		"webRequest",

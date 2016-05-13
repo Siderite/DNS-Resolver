@@ -119,6 +119,7 @@ chrome.browserAction.onClicked.addListener(function () {
 });
 
 chrome.webRequest.onCompleted.addListener(function (details) {
+	delete requests[details.requestId];
 	var host = getHost(details.url);
 	if (!host)
 		return;
@@ -133,6 +134,8 @@ chrome.webRequest.onCompleted.addListener(function (details) {
 	urls : ["<all_urls>"]
 },
 	[]);
+
+var requests={};
 
 chrome.webRequest.onBeforeRequest.addListener(function (details) {
 	if (!options.autoreplace)
@@ -151,13 +154,28 @@ chrome.webRequest.onBeforeRequest.addListener(function (details) {
 	var result = {
 		redirectUrl : newUrl
 	};
+	requests[details.requestId]=host;
 	return result;
 }, {
 	urls : ["<all_urls>"]
 },
 	["blocking"]);
 
+chrome.webRequest.onBeforeSendHeaders.addListener(function (details) {
+	if (!options.autoreplace)
+		return;
+	var host = requests[details.requestId];
+	if (!host)
+		return;
+    details.requestHeaders.push({ name: "Host", value: host });
+    return {requestHeaders: details.requestHeaders};
+}, {
+	urls : ["<all_urls>"]
+},
+	["blocking", "requestHeaders"]);
+
 chrome.webRequest.onErrorOccurred.addListener(function (details) {
+	delete requests[details.requestId];
 	var host = getHost(details.url);
 	var error = details.error;
 	if (!isNetError(error))
