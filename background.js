@@ -1,6 +1,7 @@
 var options = {
 	debug : false,
-	autoreplace : false
+	autoreplace : false,
+	suffix: '.dnscache'
 };
 var dns = {};
 chrome.storage.local.get('DNShosts', function (data) {
@@ -75,19 +76,30 @@ function countHostsToReplace() {
 	return count ? count.toString() : '';
 }
 
-function getHost(url) {
-	var m = /^(\w+:)?\/\/([^\/\?#]+)/.exec(url);
+function getHostData(url) {
+	var m = /^(?:(\w+):)?\/\/([^\/\?#]+)/.exec(url);
 	if (!m || !m[2]) {
 		debug('Could not find host for: ' + url);
 		return null;
 	}
-	return m[2];
+	var result = {
+		scheme:m[1],
+		initialHost:m[2],
+		host:m[2],
+		forceReplace:false
+	};
+	if (result.host.endsWith(options.suffix)) {
+		result.host=result.host.substr(0,result.host.length-options.suffix.length);
+		result.forceReplace=true;
+	}
+	return result;
 }
 
 function isNetError(error) {
 	switch (error) {
 	case 'net::ERR_NAME_NOT_RESOLVED':
 	case 'net::ERR_CONNECTION_REFUSED':
+//	case 'net::DNS_PROBE_FINISHED_NXDOMAIN':
 		return true;
 	default:
 		return false;
@@ -119,16 +131,15 @@ chrome.browserAction.onClicked.addListener(function () {
 });
 
 chrome.webRequest.onCompleted.addListener(function (details) {
-	delete requests[details.requestId];
-	var host = getHost(details.url);
-	if (!host)
+	var hostData = getHostData(details.url);
+	if (!hostData)
 		return;
 	var ip = details.ip;
-	if (ip == host)
+	if (ip == hostData.host)
 		return;
 	if (ip) {
-		debug(host + ' resolved to ' + ip);
-		addIp(host, ip);
+		debug(hostData.host + ' resolved to ' + ip);
+		addIp(hostData.host, ip);
 	}
 }, {
 	urls : ["<all_urls>"]
@@ -138,23 +149,30 @@ chrome.webRequest.onCompleted.addListener(function (details) {
 var requests={};
 
 chrome.webRequest.onBeforeRequest.addListener(function (details) {
-	if (!options.autoreplace)
+	var hostData = getHostData(details.url);
+	if (!hostData)
 		return;
-	var host = getHost(details.url);
-	if (!host)
+	if (!options.autoreplace&&!hostData.forceReplace)
 		return;
-	var data = dns[host];
-	if (!data || !data.replaceHost || !data.ips.length)
+	var data = dns[hostData.host];
+	if (!data || !data.ips.length || (!data.replaceHost&&!hostData.forceReplace))
 		return;
+	if (hostData.scheme=='https') {
+		debug('cannot replace host with https protocol: '+hostData.initialHost);
+		return {
+			//cancel:true,
+			redirectUrl : chrome.extension.getURL('httpsErrorPage.html')
+		};
+	}
 	var ip = data.ips[data.ips.length - 1];
 	setToRed(details.tabId);
-	var newUrl = details.url.replace(host, ip);
-	debug(host + ' had DNS resolution problems. Attempting to use ' + ip);
+	var newUrl = details.url.replace(hostData.initialHost, ip);
+	debug(hostData.host + ' had DNS resolution problems. Attempting to use ' + ip);
 	debug(details.url + ' -> ' + newUrl);
 	var result = {
 		redirectUrl : newUrl
 	};
-	requests[details.requestId]=host;
+	requests[ip]=hostData;
 	return result;
 }, {
 	urls : ["<all_urls>"]
@@ -162,12 +180,17 @@ chrome.webRequest.onBeforeRequest.addListener(function (details) {
 	["blocking"]);
 
 chrome.webRequest.onBeforeSendHeaders.addListener(function (details) {
-	if (!options.autoreplace)
+	var hostData=getHostData(details.url);
+	if (!hostData) return;
+	var ip=hostData.host; //already replaced
+	hostData = requests[ip];
+	if (!hostData)
 		return;
-	var host = requests[details.requestId];
-	if (!host)
+	if (!options.autoreplace&&!hostData.forceReplace) {
+		delete requests[ip];
 		return;
-    details.requestHeaders.push({ name: "Host", value: host });
+	}
+    details.requestHeaders.push({ name: "Host", value: hostData.host });
     return {requestHeaders: details.requestHeaders};
 }, {
 	urls : ["<all_urls>"]
@@ -175,23 +198,22 @@ chrome.webRequest.onBeforeSendHeaders.addListener(function (details) {
 	["blocking", "requestHeaders"]);
 
 chrome.webRequest.onErrorOccurred.addListener(function (details) {
-	delete requests[details.requestId];
-	var host = getHost(details.url);
+	var hostData = getHostData(details.url);
 	var error = details.error;
 	if (!isNetError(error))
 		return;
-	debug('DNS error:', host);
-	var data = dns[host];
+	debug('DNS error:', hostData.host);
+	var data = dns[hostData.host];
 	if (!data || !data.ips.length)
 		return;
 	var ip = data.ips[data.ips.length - 1];
-	if (ip == host) {
-		debug('Obsolete DNS resolution: ' + host + ' to ' + ip + '. Removing it.');
-		replaceHost(host, false);
-		deleteIp(host, ip);
+	if (ip == hostData.host) {
+		debug('Obsolete DNS resolution: ' + hostData.host + ' to ' + ip + '. Removing it.');
+		replaceHost(hostData.host, false);
+		deleteIp(hostData.host, ip);
 	} else {
 		debug('Previously working IP: ' + ip + '. Attempting to replace from now on');
-		replaceHost(host, true);
+		replaceHost(hostData.host, true);
 		setToRed(details.tabId);
 	}
 }, {
